@@ -1,1 +1,2 @@
 pympi-ling==1.70.2
+datasets[audio]==3.6.0

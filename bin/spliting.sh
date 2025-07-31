@@ -52,8 +52,8 @@ tsv_file="$2"
 #wav_type=test
 # wav_type=train
 
-input_root_dir="/home/mondhs/dev/src/speech/liepa2/l2_191h/$wav_type/wav"
-output_root_dir="./$wav_type"
+input_root_dir="$3"
+output_root_dir="$4"
 
 # Check if the TSV file exists
 if [ ! -f "$tsv_file" ]; then
