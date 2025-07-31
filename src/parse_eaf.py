@@ -114,7 +114,7 @@ def parse_eaf(eaf_path):
 
 
 
-def group_transcription_segments(annotation_doc: AnnotationDoc, max_chunk_duration: int = 30000, max_gap_between_segments: int = 3000) -> List[Annotation]:
+def group_transcription_segments(annotation_doc: AnnotationDoc, max_chunk_duration: int = 26000, max_gap_between_segments: int = 1000) -> List[Annotation]:
     """
     Groups audio transcription annotation segments into larger chunks based on time constraints.
 
@@ -236,7 +236,8 @@ def format_annotations(eaf_doc:AnnotationDoc, group_annotations:List[Annotation]
         annotation_value = annotation_value.replace("—", "-")
         annotation_value = annotation_value.replace("“", "\"")
         annotation_value = annotation_value.replace("„", "\"")
-        aStr = f"./{media_dir_name}/{media_file_name_wo_ext}.wav\t{media_dir_name}/{media_file_name_wo_ext}_chunk_{counter:03}.mp3\t{annotation.time_slot_start}\t{annotation.time_slot_end}\t{segment_length}\t{annotation_value}"
+        ### workarounds
+        aStr = f"././{media_dir_name}/{media_file_name_wo_ext}.wav\t{media_dir_name}/{media_file_name_wo_ext}_chunk_{counter:03}.mp3\t{annotation.time_slot_start}\t{annotation.time_slot_end}\t{segment_length}\t{annotation_value}"
         result.append(aStr)
         counter += 1
     return "\n".join(result)
