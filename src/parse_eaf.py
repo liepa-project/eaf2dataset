@@ -238,6 +238,8 @@ def format_annotations(eaf_doc:AnnotationDoc, group_annotations:List[Annotation]
         annotation_value = annotation_value.replace("„", "\"")
         ### workarounds
         aStr = f"././{media_dir_name}/{media_file_name_wo_ext}.wav\t{media_dir_name}/{media_file_name_wo_ext}_chunk_{counter:03}.mp3\t{annotation.time_slot_start}\t{annotation.time_slot_end}\t{segment_length}\t{annotation_value}"
+        if(segment_length > 30000):
+            raise ValueError(f"Too long segment: {aStr}")
         result.append(aStr)
         counter += 1
     return "\n".join(result)
