@@ -232,6 +232,9 @@ def format_annotations(eaf_doc:AnnotationDoc, group_annotations:List[Annotation]
     counter = 1
     for annotation in group_annotations:
         segment_length=annotation.time_slot_end - annotation.time_slot_start
+        if(segment_length > 30000):
+            # segment too long to use
+            continue
         annotation_value = annotation.annotation_value.replace("\n", " ")
         annotation_value = annotation_value.replace("—", "-")
         annotation_value = annotation_value.replace("“", "\"")
@@ -242,9 +245,7 @@ def format_annotations(eaf_doc:AnnotationDoc, group_annotations:List[Annotation]
         ### workarounds
         if(annotation_value_len>1000):
            aStr = f"###{aStr}"
-        if(segment_length > 30000):
-            raise ValueError(f"Too long segment: {aStr}")
-            #aStr = f"###{aStr}"
+
 
         result.append(aStr)
         counter += 1
