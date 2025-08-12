@@ -251,6 +251,13 @@ def format_annotations(eaf_doc:AnnotationDoc, group_annotations:List[Annotation]
     return "\n".join(result)
 
     
+def process_eaf_file(eaf_path):
+    eaf_doc=parse_eaf(eaf_path)
+    # print("eaf_doc", eaf_doc)
+    # print("json", json.dumps(dataclasses.asdict(eaf_doc)))
+    group_annotation = group_transcription_segments(eaf_doc)
+    
+    print(format_annotations(eaf_doc, group_annotation))
 
 
 
@@ -270,13 +277,7 @@ def main():
         return
     logger.debug("\n--- Starting wer calc in '%s' ---", eaf_path)
     
-    eaf_doc=parse_eaf(eaf_path)
-    # print("eaf_doc", eaf_doc)
-    # print("json", json.dumps(dataclasses.asdict(eaf_doc)))
-    group_annotation = group_transcription_segments(eaf_doc)
-    
-    print(format_annotations(eaf_doc, group_annotation))
-
+    process_eaf_file(eaf_path)
 
     return
 

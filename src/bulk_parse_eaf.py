@@ -1,8 +1,9 @@
 import os
 import argparse
+import parse_eaf
 
 import logging
-logger = logging.getLogger("DEBUG")
+logger = logging.getLogger("INFO")
 logging.basicConfig(
     level=os.environ.get('PARSE_EAF_LOGLEVEL', 'INFO').upper()
 )
@@ -91,7 +92,9 @@ def main():
 
     all_eaf_files = find_eaf_files(root_path)
     filtered_eaf_files = filter_eaf_files_by_subdir(all_eaf_files, exclusion_file.name)
-    print(filtered_eaf_files)
+    for eaf_file in filtered_eaf_files:
+        parse_eaf.process_eaf_file(eaf_file)
+    # print(filtered_eaf_files)
 
 
 if __name__ == "__main__":
