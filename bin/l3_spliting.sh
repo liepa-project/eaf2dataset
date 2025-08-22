@@ -108,15 +108,15 @@ function get_wav_path() {
 
   # If the file was not found, print an error message to stderr
   if [[ -z "$full_path" ]]; then
-    echo "$(date --iso-8601=s)  Error: File '$filename' not found in '$search_dir'." |tee file_error.log
+    echo "$(date --iso-8601=s)  Error: File '$filename' not found in '$search_dir'." |tee -a file_error.log
   fi
 
   # Return the found path
   echo "$full_path"
 }
 
-echo "$(date --iso-8601=s) --- start new attempt "|tee format_error.log
-echo "$(date --iso-8601=s)  --- start new attempt" |tee file_error.log
+echo "$(date --iso-8601=s) --- start new attempt "|tee  format_error.log
+echo "$(date --iso-8601=s)  --- start new attempt" |tee  file_error.log
 
 # Read the TSV file line by line
 # IFS=$'\t' sets the Internal Field Separator to a tab character.
@@ -124,15 +124,16 @@ echo "$(date --iso-8601=s)  --- start new attempt" |tee file_error.log
 while IFS=$'\t' read -r input_wav output_mp3 start_segment end_segment duration annotation ; do
     # Skip empty lines or lines that don't have enough columns
     if [ -z "$input_wav" ] || [ -z "$output_mp3" ] || [ -z "$start_segment" ] || [ -z "$end_segment" ]; then
-        echo "$(date --iso-8601=s) Skipping malformed line: '$input_wav	$output_mp3	$start_segment	$end_segment	$duration	$annotation'"|tee format_error.log
+        echo "$(date --iso-8601=s) Skipping malformed line: '$input_wav	$output_mp3	$start_segment	$end_segment	$duration	$annotation'"|tee -a format_error.log
         continue
     fi
 
     # remove file prefix like XX_
-    basename_wav_name=$(basename $input_wav) 
+    basename_wav_name=$(basename "$input_wav") 
     #input_file=$input_root_dir/$input_wav
     input_file=$(get_wav_path "$basename_wav_name" "$input_root_dir" "$fallback_input_root_dir")
-    output_file=$output_root_dir/$output_mp3
+    output_mp3=${output_mp3// /_}
+    output_file="$output_root_dir/$output_mp3"
     start_sec=$(awk "BEGIN {x=$start_segment;y=1000;print x/y}")
     end_sec=$(awk "BEGIN {x=$end_segment;y=1000;print x/y}")
 
