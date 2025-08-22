@@ -94,6 +94,7 @@ function get_wav_path() {
   # Check if the filename starts with two word characters and an underscore using regex
   # [[ "$filename" =~ ^[[:alnum:]]{2}_ ]] is a more robust way to check for word characters
   if [[ "$filename" =~ ^[a-zA-Z0-9]{2}_ ]]; then
+    filename=$(echo $filename|sed -e "s/^\w\w_//")
     search_dir=$wav_dir
   else
     search_dir=$fallback_wav_dir
@@ -128,7 +129,7 @@ while IFS=$'\t' read -r input_wav output_mp3 start_segment end_segment duration 
     # remove file prefix like XX_
     basename_wav_name=$(basename $input_wav) 
     #input_file=$input_root_dir/$input_wav
-    input_file=get_wav_path "$basename_wav_name" "$input_root_dir" "$fallback_input_root_dir"
+        input_file=get_wav_path "$basename_wav_name" "$input_root_dir" "$fallback_input_root_dir"
     output_file=$output_root_dir/$output_mp3
     start_sec=$(awk "BEGIN {x=$start_segment;y=1000;print x/y}")
     end_sec=$(awk "BEGIN {x=$end_segment;y=1000;print x/y}")
