@@ -94,10 +94,10 @@ function get_wav_path() {
   # Check if the filename starts with two word characters and an underscore using regex
   # [[ "$filename" =~ ^[[:alnum:]]{2}_ ]] is a more robust way to check for word characters
   if [[ "$filename" =~ ^[a-zA-Z0-9]{2}_ ]]; then
-    filename=$(echo $filename|sed -e "s/^\w\w_//")
-    search_dir=$wav_dir
+    filename=$(echo "$filename"|sed -e "s/^\w\w_//")
+    search_dir="$wav_dir"
   else
-    search_dir=$fallback_wav_dir
+    search_dir="$fallback_wav_dir"
   fi
 
   # Use find to locate the file.
