@@ -72,8 +72,8 @@ failed_count=0
 
 
 # Function to find the full path of a .wav file
-# It searches in /data/corpus/records if the filename starts with two word characters and an underscore (e.g., "aa_").
-# Otherwise, it searches in /var/www/html/records/.
+# It searches in wav_dir if the filename starts with two word characters and an underscore (e.g., "aa_").
+# Otherwise, it searches in fallback_wav_dir.
 #
 # Usage:
 # get_wav_path "filename.wav"
@@ -95,6 +95,7 @@ function get_wav_path() {
   # [[ "$filename" =~ ^[[:alnum:]]{2}_ ]] is a more robust way to check for word characters
   if [[ "$filename" =~ ^[a-zA-Z0-9]{2}_ ]]; then
     filename=$(echo "$filename"|sed -e "s/^\w\w_//")
+    echo "Wihoout prefix: $filename"
     search_dir="$wav_dir"
   else
     search_dir="$fallback_wav_dir"
@@ -138,6 +139,7 @@ while IFS=$'\t' read -r input_wav output_mp3 start_segment end_segment duration 
     end_sec=$(awk "BEGIN {x=$end_segment;y=1000;print x/y}")
 
     echo "Processing:"
+    echo "  Basename WAV: $basename_wav_name"
     echo "  Input WAV:    $input_file"
     echo "  Output MP3:   $output_file"
     echo "  Start:        $start_sec"
