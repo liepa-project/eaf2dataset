@@ -95,7 +95,6 @@ function get_wav_path() {
   # [[ "$filename" =~ ^[[:alnum:]]{2}_ ]] is a more robust way to check for word characters
   if [[ "$filename" =~ ^[a-zA-Z0-9]{2}_ ]]; then
     filename=$(echo "$filename"|sed -e "s/^\w\w_//")
-    echo "Wihoout prefix: $filename"
     search_dir="$wav_dir"
   else
     search_dir="$fallback_wav_dir"
@@ -109,7 +108,7 @@ function get_wav_path() {
 
   # If the file was not found, print an error message to stderr
   if [[ -z "$full_path" ]]; then
-    echo "$(date --iso-8601=s)  Error: File '$filename' not found in '$search_dir'." |tee -a file_error.log
+    echo "$(date --iso-8601=s)  Error: File '$filename'(original $1) not found in '$search_dir'." |tee -a file_error.log
   fi
 
   # Return the found path
