@@ -115,6 +115,8 @@ function get_wav_path() {
   echo "$full_path"
 }
 
+echo "$(date --iso-8601=s) --- start new attempt "|tee format_error.log
+echo "$(date --iso-8601=s)  --- start new attempt" |tee file_error.log
 
 # Read the TSV file line by line
 # IFS=$'\t' sets the Internal Field Separator to a tab character.
