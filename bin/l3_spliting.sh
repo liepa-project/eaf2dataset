@@ -138,8 +138,9 @@ while IFS=$'\t' read -r input_wav output_mp3 start_segment end_segment duration 
     end_sec=$(awk "BEGIN {x=$end_segment;y=1000;print x/y}")
 
     echo "Processing:"
+    echo "  input_wav :   $input_wav
     echo "  Basename WAV: $basename_wav_name"
-    echo "  Input WAV:    $input_file"
+    echo "  Input PATH:   $input_file"
     echo "  Output MP3:   $output_file"
     echo "  Start:        $start_sec"
     echo "  End:          $end_sec"
