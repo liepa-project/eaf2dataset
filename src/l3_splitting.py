@@ -64,7 +64,7 @@ def get_wav_path(filename_original, input_root_dir, fallback_input_root_dir):
         search_dir = fallback_input_root_dir
 
     # Perform a recursive search for the file within the determined search_dir
-    for root, _, files in os.walk(search_dir):
+    for root, _, files in os.walk(search_dir, followlinks=True):
         if filename_to_search in files:
             full_path = os.path.join(root, filename_to_search)
             break # Found the file, stop searching
