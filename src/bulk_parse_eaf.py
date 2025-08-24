@@ -37,7 +37,7 @@ def find_eaf_files(path):
 
 
 
-def filter_eaf_files_by_subdir(eaf_files, exclude_file_path):
+def filter_eaf_files_by_subdir(eaf_files, exclude_file_path, include_file_path):
     """
     Filters a list of .eaf file paths, excluding any files located in subdirectories
     whose names are listed in the exclusion file.
@@ -50,17 +50,30 @@ def filter_eaf_files_by_subdir(eaf_files, exclude_file_path):
     Returns:
         list: A new list of .eaf file paths that are not in the excluded subdirectories.
     """
-    logger.info("exclude_file_path: %s", exclude_file_path)
+
+   
+
     excluded_subdirs = set()
+    include_subdirs = set()
     try:
-        with open(exclude_file_path, 'r') as f:
-            # Read each line, strip whitespace, and add to the set
-            for line in f:
-                subdir_name = line.strip()
-                if subdir_name:  # Ensure we don't add empty strings
-                    excluded_subdirs.add(subdir_name)
+        if(exclude_file_path!=None):
+            logger.info("exclude_file_path: %s", exclude_file_path)
+            with open(exclude_file_path, 'r') as f:
+                # Read each line, strip whitespace, and add to the set
+                for line in f:
+                    subdir_name = line.strip()
+                    if subdir_name:  # Ensure we don't add empty strings
+                        excluded_subdirs.add(subdir_name)
+        if(include_file_path!=None):
+            logger.info("include_file_path: %s", include_file_path)
+            with open(include_file_path, 'r') as f:
+                # Read each line, strip whitespace, and add to the set
+                for line in f:
+                    subdir_name = line.strip()
+                    if subdir_name:  # Ensure we don't add empty strings
+                        include_subdirs.add(subdir_name)
     except FileNotFoundError:
-        print(f"Error: Exclusion file not found at '{exclude_file_path}'")
+        print(f"Error: Exclusion file not found at '{exclude_file_path}' or '{include_file_path}'")
         return eaf_files  # Return the original list if the exclusion file doesn't exist
     filtered_files = []
     for file_path in eaf_files:
@@ -68,9 +81,12 @@ def filter_eaf_files_by_subdir(eaf_files, exclude_file_path):
         subdir_name = os.path.basename(os.path.dirname(file_path))
 
         # Check if the subdirectory name is NOT in our set of excluded names
-        if subdir_name not in excluded_subdirs:
+        if excluded_subdirs and subdir_name not in excluded_subdirs:
             filtered_files.append(file_path)
-
+        elif include_subdirs and subdir_name not in include_subdirs:
+            filtered_files.append(file_path)
+        else:
+            filtered_files.append(file_path)
     return filtered_files
 
 
@@ -79,19 +95,22 @@ def main():
     parser.add_argument("-r", "--root_path", type=dir_path,
                         help="Path root dir that contains the eaf files.")
     parser.add_argument("-e", "--exclusion_file", type=argparse.FileType('r'),
-                        help="Path file that contains list of excoluded dirs.")
+                        help="Path file that contains list of excluded dirs.")
+    parser.add_argument("-i", "--inclusion_file", type=argparse.FileType('r'),
+                        help="Path file that contains list of included dirs.")
 
 
     args = parser.parse_args()
     root_path = args.root_path
-    exclusion_file = args.exclusion_file
+    exclusion_file = args.exclusion_file.name if args.exclusion_file else None
+    inclusion_file = args.inclusion_file.name if args.inclusion_file else None
     if not os.path.isdir(root_path):
         logger.error(f"Error: File not found at '{root_path}'. Please provide a valid file path.")
         return
     logger.debug("\n--- Starting wer calc in '%s' ---", root_path)
 
     all_eaf_files = find_eaf_files(root_path)
-    filtered_eaf_files = filter_eaf_files_by_subdir(all_eaf_files, exclusion_file.name)
+    filtered_eaf_files = filter_eaf_files_by_subdir(all_eaf_files, exclusion_file, inclusion_file)
     for eaf_file in filtered_eaf_files:
         parse_eaf.process_eaf_file(eaf_file)
     # print(filtered_eaf_files)

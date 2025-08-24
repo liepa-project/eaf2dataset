@@ -8,6 +8,10 @@ import re
 import subprocess
 import datetime
 import sys
+from typing import Optional
+
+
+import pandas as pd
 
 # --- Helper Functions ---
 
@@ -22,7 +26,7 @@ def check_ffmpeg():
         print("On macOS with Homebrew: brew install ffmpeg", file=sys.stderr)
         sys.exit(1)
 
-def log_to_file_and_stderr(message, filename="error.log"):
+def log_to_file_and_stderr(message, filename="metadata.csv"):
     """
     Logs a message with an ISO-formatted timestamp to a specified file
     and also prints it to stderr.
@@ -36,46 +40,91 @@ def log_to_file_and_stderr(message, filename="error.log"):
         f.write(f"{timestamp}  {message}\n")
     print(f"{timestamp}  {message}", file=sys.stderr)
 
-def get_wav_path(filename_original, input_root_dir, fallback_input_root_dir):
+def log_metadata(output_mp3, annotation:str, duration:str, txt_len:str, filename="error.log"):
     """
-    Finds the full path of a .wav file based on its basename and search directories.
-    It checks if the filename starts with two alphanumeric characters and an underscore (e.g., "aa_").
-    If it matches, the prefix is removed, and the search starts in `input_root_dir`.
-    Otherwise, it searches in `fallback_input_root_dir`.
+    Logs a message with an ISO-formatted timestamp to a specified file
+    and also prints it to stderr.
 
     Args:
-        filename_original (str): The original basename of the .wav file (e.g., "AB_test.wav" or "regular_file.wav").
-        input_root_dir (str): The primary directory to search for WAV files.
-        fallback_input_root_dir (str): The fallback directory to search if not found in primary or if prefix not matched.
+        message (str): The log message.
+        filename (str): The name of the log file to append to.
+    """
+    
+    clean_annotation=annotation.replace(',', '').replace('"', '').replace('|', '')
+
+    with open(filename, 'a', encoding='utf-8') as f:
+        f.write(f"./mp3/{output_mp3},{clean_annotation},{duration},{txt_len}\n")
+    
+
+# def get_wav_path(filename_original, input_root_dir, fallback_input_root_dir):
+#     """
+#     Finds the full path of a .wav file based on its basename and search directories.
+#     It checks if the filename starts with two alphanumeric characters and an underscore (e.g., "aa_").
+#     If it matches, the prefix is removed, and the search starts in `input_root_dir`.
+#     Otherwise, it searches in `fallback_input_root_dir`.
+
+#     Args:
+#         filename_original (str): The original basename of the .wav file (e.g., "AB_test.wav" or "regular_file.wav").
+#         input_root_dir (str): The primary directory to search for WAV files.
+#         fallback_input_root_dir (str): The fallback directory to search if not found in primary or if prefix not matched.
+
+#     Returns:
+#         str: The full path of the found .wav file, or None if not found.
+#     """
+#     filename_to_search = filename_original
+#     search_dir = ""
+#     full_path = None
+
+#     # Check if the filename starts with two alphanumeric characters and an underscore
+#     if re.match(r'^[a-zA-Z0-9]{2}_', filename_original):
+#         # Remove the prefix (e.g., "aa_")
+#         filename_to_search = re.sub(r'^[a-zA-Z0-9]{2}_', '', filename_original)
+#         search_dir = input_root_dir
+#     else:
+#         search_dir = fallback_input_root_dir
+
+#     # Perform a recursive search for the file within the determined search_dir
+#     for root, _, files in os.walk(search_dir, followlinks=True):
+#         if filename_to_search in files:
+#             full_path = os.path.join(root, filename_to_search)
+#             break # Found the file, stop searching
+
+#     if full_path is None:
+#         log_to_file_and_stderr(
+#             f"Error: File '{filename_to_search}' (original '{filename_original}') not found in '{search_dir}'.",
+#             "file_error.log"
+#         )
+#         raise Exception("File not found")
+#     return full_path
+
+
+
+#, csv_path_file_index: str
+
+def find_real_path(a_file_path: str, file_index_df) -> Optional[str]:
+    """
+    Reads a CSV file with 'file_path' and 'real_path' columns,
+    and returns the 'real_path' corresponding to a given 'file_path'.
+
+    Args:
+        a_file_path (str): The file path to search for.
+        csv_path_file_index (str): The path to the CSV file.
 
     Returns:
-        str: The full path of the found .wav file, or None if not found.
+        Optional[str]: The corresponding 'real_path' if found, otherwise None.
     """
-    filename_to_search = filename_original
-    search_dir = ""
-    full_path = None
+    try:
+        df=file_index_df
+        result = df[df['file_path'] == a_file_path]['real_path']
+        if not result.empty:
+            return result.iloc[0]
+        else:
+            return None
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+        return None
 
-    # Check if the filename starts with two alphanumeric characters and an underscore
-    if re.match(r'^[a-zA-Z0-9]{2}_', filename_original):
-        # Remove the prefix (e.g., "aa_")
-        filename_to_search = re.sub(r'^[a-zA-Z0-9]{2}_', '', filename_original)
-        search_dir = input_root_dir
-    else:
-        search_dir = fallback_input_root_dir
 
-    # Perform a recursive search for the file within the determined search_dir
-    for root, _, files in os.walk(search_dir, followlinks=True):
-        if filename_to_search in files:
-            full_path = os.path.join(root, filename_to_search)
-            break # Found the file, stop searching
-
-    if full_path is None:
-        log_to_file_and_stderr(
-            f"Error: File '{filename_to_search}' (original '{filename_original}') not found in '{search_dir}'.",
-            "file_error.log"
-        )
-        raise Exception("File not found")
-    return full_path
 
 # --- Main Script ---
 def main():
@@ -101,18 +150,18 @@ def main():
                                           "  5. duration_segment  (Duration of the segment - currently not used by script but good for record)\n"
                                           "  6. annotation        (Any annotation - currently not used by script but good for record)\n\n"
                                           "Example TSV line: /path/to/input.wav /path/to/output.mp3 10.5 15.2 4.7 Some annotation")
-    parser.add_argument("input_root_dir", help="Root directory for input WAV files.")
+    parser.add_argument("file_index_path", help="Root directory for input WAV files.")
     parser.add_argument("output_root_dir", help="Root directory for output MP3 files.")
-    parser.add_argument("fallback_input_root_dir", help="Fallback root directory for input WAV files if not found in primary.")
+    
 
     args = parser.parse_args()
 
     # Assign arguments to variables
     # args.wav_type is captured but not used, matching the original shell script's behavior
     tsv_file = args.tsv_file
-    input_root_dir = args.input_root_dir
+    file_index_path = args.file_index_path
     output_root_dir = args.output_root_dir
-    fallback_input_root_dir = args.fallback_input_root_dir
+    file_index_df= pd.read_csv(file_index_path, header=None, names=['file_path', 'real_path'])
 
     # Check if the TSV file exists
     if not os.path.isfile(tsv_file):
@@ -141,8 +190,9 @@ def main():
 
             input_wav_orig, output_mp3_orig, start_segment_str, end_segment_str = row[:4]
             # Optional fields (duration and annotation) are not actively used in the processing logic
-            # duration = row[4] if len(row) > 4 else ""
-            # annotation = row[5] if len(row) > 5 else ""
+            duration = row[4] if len(row) > 4 else ""
+            txt_len = row[5] if len(row) > 5 else ""
+            annotation = row[6] if len(row) > 6 else ""
 
             # Check if critical fields are empty
             if not all([input_wav_orig, output_mp3_orig, start_segment_str, end_segment_str]):
@@ -152,7 +202,8 @@ def main():
 
             # Process input and output paths
             basename_wav_name = os.path.basename(input_wav_orig)
-            input_file = get_wav_path(basename_wav_name, input_root_dir, fallback_input_root_dir)
+            # input_file = get_wav_path(basename_wav_name, input_root_dir, fallback_input_root_dir)
+            input_file = find_real_path(input_wav_orig, file_index_df)
 
             output_mp3_cleaned = output_mp3_orig.replace(' ', '_') # Replace spaces in output filename
             output_file = os.path.join(output_root_dir, output_mp3_cleaned)
@@ -172,7 +223,7 @@ def main():
 
             print("Processing:")
             print(f"  input_wav :   {input_wav_orig}")
-            print(f"  Basename WAV: {basename_wav_name}")
+            print(f"  Basename WAV: {basename_wav_name} {input_file}")
             print(f"  Input PATH:   {input_file}")
             print(f"  Output MP3:   {output_file}")
             print(f"  Start:        {start_sec}")
@@ -213,6 +264,7 @@ def main():
                 subprocess.run(cmd, check=True, capture_output=True, text=True)
                 print(f"  Successfully extracted and converted to: {output_file}")
                 processed_count += 1
+                log_metadata(output_file, annotation, duration, txt_len)
             except subprocess.CalledProcessError as e:
                 print(f"  Error: Failed to process segment from '{input_file}' to '{output_file}'. "
                       f"FFmpeg stderr: {e.stderr.strip()}", file=sys.stderr)
