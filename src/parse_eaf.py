@@ -179,6 +179,18 @@ def group_transcription_segments(annotation_doc: AnnotationDoc, max_chunk_durati
         # segment_end = segment.time_slot_end
         # segment_text = segment.annotation_value
 
+        if(segment.time_slot_end-segment.time_slot_start > 30000):
+            # segment too long to use
+            logging.error(f"[group_transcription_segments]Error : segment>30s\t{segment}")
+            continue
+        if(len(segment.annotation_value)==0):
+            # raise( Exception(f"Error : zero len annotation {aStr}"))
+            logging.error(f"[group_transcription_segments]Error : zero len annotation\t{segment}")
+            continue
+        if(len(segment.annotation_value)>700):
+        #    aStr = f"###{aStr}"
+            logging.error(f"[group_transcription_segments]Error : text_len>700\t{segment}")
+            continue
         if current_chunk is None:
             # If no chunk is currently being built, start a new one with the current segment.
             current_chunk = Annotation(id=segment.id,
@@ -232,9 +244,6 @@ def format_annotations(eaf_doc:AnnotationDoc, group_annotations:List[Annotation]
     counter = 1
     for annotation in group_annotations:
         segment_length=annotation.time_slot_end - annotation.time_slot_start
-        if(segment_length > 30000):
-            # segment too long to use
-            continue
         annotation_value = annotation.annotation_value.replace("\n", " ")
         annotation_value = annotation_value.replace("—", "-")
         annotation_value = annotation_value.replace("“", "\"")
@@ -244,13 +253,17 @@ def format_annotations(eaf_doc:AnnotationDoc, group_annotations:List[Annotation]
         #bash script loosing first symbols. I ll us currend dir hack
         aStr = f"./{media_dir_name}/{media_file_name_wo_ext}.wav\t{media_dir_name}/{media_file_name_wo_ext}_chunk_{counter:03}.mp3\t{annotation.time_slot_start}\t{annotation.time_slot_end}\t{segment_length}\t{annotation_value_len}\t{annotation_value}"
         ### workarounds
+        if(segment_length > 30000):
+            # segment too long to use
+            logging.error(f"[format_annotations]Error : segment>30s\t{aStr}")
+            continue
         if(annotation_value_len==0):
             # raise( Exception(f"Error : zero len annotation {aStr}"))
             logging.error(f"Error : zero len annotation\t{aStr}")
             continue
         if(annotation_value_len>700):
         #    aStr = f"###{aStr}"
-            logging.error(f"Error : text_len>700\t{aStr}")
+            logging.error(f"[format_annotations]Error : text_len>700\t{aStr}")
             continue
 
 
