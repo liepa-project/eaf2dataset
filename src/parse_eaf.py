@@ -244,6 +244,8 @@ def format_annotations(eaf_doc:AnnotationDoc, group_annotations:List[Annotation]
         #bash script loosing first symbols. I ll us currend dir hack
         aStr = f"./{media_dir_name}/{media_file_name_wo_ext}.wav\t{media_dir_name}/{media_file_name_wo_ext}_chunk_{counter:03}.mp3\t{annotation.time_slot_start}\t{annotation.time_slot_end}\t{segment_length}\t{annotation_value_len}\t{annotation_value}"
         ### workarounds
+        if(annotation_value_len==0):
+            raise( Exception(f"Error : zero len annotation {aStr}"))
         if(annotation_value_len>700):
         #    aStr = f"###{aStr}"
            continue

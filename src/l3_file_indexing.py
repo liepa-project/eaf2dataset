@@ -83,11 +83,10 @@ def find_real_paths_from_csv(
     try:
         # Assuming no header in the input TSV
         df = pd.read_csv(tsv_file_path, header=0, delimiter="\t", 
-                        #  names=["input_wav_path", "output_mp3_path", "start_segment", "end_segment", "duration_segment", "text_len", "annotation"],
                          encoding='utf-8',
                          engine='python',
                          on_bad_lines=line_fixer
-                         )
+                         )#  names=["input_wav_path", "output_mp3_path", "start_segment", "end_segment", "duration_segment", "text_len", "annotation"],
         print(df)
 
         # Ensure the first column exists
@@ -128,7 +127,7 @@ def find_real_paths_from_csv(
     try:
         # Convert the dictionary to a pandas DataFrame
         output_df = pd.DataFrame(found_paths_map.items(), columns=['OriginalPath', 'RealPath'])
-        output_df.to_csv(output_csv_path, index=False, header=False)
+        output_df.to_csv(output_csv_path, index=False, header=True)
         print(f"Results successfully saved to '{output_csv_path}'")
     except Exception as e:
         print(f"Error saving results to output CSV '{output_csv_path}': {e}")

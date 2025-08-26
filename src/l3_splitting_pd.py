@@ -178,108 +178,126 @@ def main():
     log_to_file_and_stderr("--- start new attempt", "format_error.log")
     log_to_file_and_stderr("--- start new attempt", "file_error.log")
 
+    try:
+        df = pd.read_csv(tsv_file, sep='\t', header=0)
+    except FileNotFoundError:
+        print(f"Error: The TSV file '{tsv_file}' was not found.", file=sys.stderr)
+        return
+    except pd.errors.ParserError as e:
+        print(f"Error: Could not parse TSV file. Check format. {e}", file=sys.stderr)
+        return
+    
     # Open and read the TSV file line by line
-    with open(tsv_file, 'r', newline='', encoding='utf-8') as f:
-        reader = csv.reader(f, delimiter='\t')
-        for i, row in enumerate(reader):
-            # Skip lines that don't have enough critical columns (at least 4: input, output, start, end)
-            if len(row) < 4:
-                log_to_file_and_stderr(f"Skipping malformed line {i+1}: '{' '.join(row)}'",
-                                       "format_error.log")
-                continue
+    # with open(tsv_file, 'r', newline='', encoding='utf-8') as f:
+        # reader = csv.reader(f, delimiter='\t')
+        # for i, row in enumerate(reader):
+    for i, row in df.iterrows():
+        # Skip lines that don't have enough critical columns (at least 4: input, output, start, end)
+        # if len(row) < 4:
+        #     log_to_file_and_stderr(f"Skipping malformed line {i+1}: '{' '.join(row)}'",
+        #                             "format_error.log")
+        #     continue
 
-            input_wav_orig, output_mp3_orig, start_segment_str, end_segment_str = row[:4]
-            # Optional fields (duration and annotation) are not actively used in the processing logic
-            duration = row[4] if len(row) > 4 else ""
-            txt_len = row[5] if len(row) > 5 else ""
-            annotation = row[6] if len(row) > 6 else ""
+        # input_wav_orig, output_mp3_orig, start_segment_str, end_segment_str = row[:4]
+        # # Optional fields (duration and annotation) are not actively used in the processing logic
+        # duration = row[4] if len(row) > 4 else ""
+        # txt_len = row[5] if len(row) > 5 else ""
+        # annotation = row[6] if len(row) > 6 else ""
 
-            # Check if critical fields are empty
-            if not all([input_wav_orig, output_mp3_orig, start_segment_str, end_segment_str]):
-                log_to_file_and_stderr(f"Skipping malformed line {i+1} (missing critical data): '{' '.join(row)}'",
-                                       "format_error.log")
-                continue
+        input_wav_orig=row['input_wav_path']
+        output_mp3_orig=row['output_mp3_path']
+        start_segment_str=row['start_segment']
+        end_segment_str=row['end_segment']
+        duration=row['duration_segment']
+        txt_len=row['text_len']
+        annotation=row['annotation']
 
-            # Process input and output paths
-            basename_wav_name = os.path.basename(input_wav_orig)
-            # input_file = get_wav_path(basename_wav_name, input_root_dir, fallback_input_root_dir)
-            input_file = find_real_path(input_wav_orig, file_index_df)
+        # Check if critical fields are empty
+        # if not all([input_wav_orig, output_mp3_orig, start_segment_str, end_segment_str]):
+        #     log_to_file_and_stderr(f"Skipping malformed line {i+1} (missing critical data): '{' '.join(row)}'",
+        #                             "format_error.log")
+        #     continue
 
-            output_mp3_cleaned = output_mp3_orig.replace(' ', '_') # Replace spaces in output filename
-            output_file = os.path.join(output_root_dir, output_mp3_cleaned)
+        # Process input and output paths
+        basename_wav_name = os.path.basename(input_wav_orig)
+        # input_file = get_wav_path(basename_wav_name, input_root_dir, fallback_input_root_dir)
+        input_file = find_real_path(input_wav_orig, file_index_df)
 
-            if os.path.isfile(output_file):
-                log_to_file_and_stderr(f"Warning: Output file '{output_file}' exists already. Skipping this segment.", "file_exists.log")
-                failed_count += 1
-                continue
+        output_mp3_cleaned = output_mp3_orig.replace(' ', '_') # Replace spaces in output filename
+        output_file = os.path.join(output_root_dir, output_mp3_cleaned)
 
-            # Convert start and end times, replicating the shell script's awk logic
-            # If the segment string contains ':', treat it as HH:MM:SS.ms.
-            # Otherwise, assume it's a numeric value in milliseconds and convert to seconds.
+        if os.path.isfile(output_file):
+            log_to_file_and_stderr(f"Warning: Output file '{output_file}' exists already. Skipping this segment.", "file_exists.log")
+            failed_count += 1
+            continue
+
+        # Convert start and end times, replicating the shell script's awk logic
+        # If the segment string contains ':', treat it as HH:MM:SS.ms.
+        # Otherwise, assume it's a numeric value in milliseconds and convert to seconds.
+        try:
+            start_sec = str(float(start_segment_str) / 1000)
+            end_sec = str(float(end_segment_str) / 1000)
+        except ValueError:
+            log_to_file_and_stderr(f"Skipping line {i} {output_mp3_orig}: Invalid start or end segment time format. "
+                                    f"Start: '{start_segment_str}', End: '{end_segment_str}'",
+                                    "format_error.log")
+            failed_count += 1
+            continue
+
+        print("Processing:")
+        print(f"  input_wav :   {input_wav_orig}")
+        print(f"  Basename WAV: {basename_wav_name} {input_file}")
+        print(f"  Input PATH:   {input_file}")
+        print(f"  Output MP3:   {output_file}")
+        print(f"  Start:        {start_sec}")
+        print(f"  End:          {end_sec}")
+
+        # Create the output directory if it doesn't exist
+        output_dir = os.path.dirname(output_file)
+        if not os.path.exists(output_dir):
+            print(f"  Creating output directory: {output_dir}")
             try:
-                start_sec = start_segment_str if ':' in start_segment_str else str(float(start_segment_str) / 1000)
-                end_sec = end_segment_str if ':' in end_segment_str else str(float(end_segment_str) / 1000)
-            except ValueError:
-                log_to_file_and_stderr(f"Skipping line {i+1}: Invalid start or end segment time format. "
-                                       f"Start: '{start_segment_str}', End: '{end_segment_str}'",
-                                       "format_error.log")
+                os.makedirs(output_dir)
+            except OSError as e:
+                print(f"Error: Failed to create directory '{output_dir}'. Skipping this segment. Error: {e}", file=sys.stderr)
                 failed_count += 1
                 continue
 
-            print("Processing:")
-            print(f"  input_wav :   {input_wav_orig}")
-            print(f"  Basename WAV: {basename_wav_name} {input_file}")
-            print(f"  Input PATH:   {input_file}")
-            print(f"  Output MP3:   {output_file}")
-            print(f"  Start:        {start_sec}")
-            print(f"  End:          {end_sec}")
+        # Check if the input WAV file was found and exists
+        if input_file is None or not os.path.isfile(input_file):
+            print(f"Error: Input WAV file '{input_file}' not found or path resolution failed. Skipping this segment.", file=sys.stderr)
+            failed_count += 1
+            raise Exception("Failed segment processing")
+            # continue
 
-            # Create the output directory if it doesn't exist
-            output_dir = os.path.dirname(output_file)
-            if not os.path.exists(output_dir):
-                print(f"  Creating output directory: {output_dir}")
-                try:
-                    os.makedirs(output_dir)
-                except OSError as e:
-                    print(f"Error: Failed to create directory '{output_dir}'. Skipping this segment. Error: {e}", file=sys.stderr)
-                    failed_count += 1
-                    continue
+        # Construct the ffmpeg command
+        cmd = [
+            "ffmpeg",
+            "-i", input_file,
+            "-ss", start_sec,
+            "-to", end_sec,
+            "-c:a", "libmp3lame",
+            "-q:a", "2",
+            "-y", output_file
+        ]
 
-            # Check if the input WAV file was found and exists
-            if input_file is None or not os.path.isfile(input_file):
-                print(f"Error: Input WAV file '{input_file}' not found or path resolution failed. Skipping this segment.", file=sys.stderr)
-                failed_count += 1
-                raise Exception("Failed segment processing")
-                # continue
-
-            # Construct the ffmpeg command
-            cmd = [
-                "ffmpeg",
-                "-i", input_file,
-                "-ss", start_sec,
-                "-to", end_sec,
-                "-c:a", "libmp3lame",
-                "-q:a", "2",
-                "-y", output_file
-            ]
-
-            # Execute the ffmpeg command
-            try:
-                # `subprocess.run` with `check=True` raises `CalledProcessError` for non-zero exit codes.
-                # `capture_output=True` redirects stdout/stderr, mimicking `&> /dev/null`.
-                subprocess.run(cmd, check=True, capture_output=True, text=True)
-                print(f"  Successfully extracted and converted to: {output_file}")
-                processed_count += 1
-                log_metadata(output_mp3_cleaned, annotation, duration, txt_len)
-            except subprocess.CalledProcessError as e:
-                print(f"  Error: Failed to process segment from '{input_file}' to '{output_file}'. "
-                      f"FFmpeg stderr: {e.stderr.strip()}", file=sys.stderr)
-                failed_count += 1
-            except FileNotFoundError:
-                # This specific error means the 'ffmpeg' executable itself wasn't found
-                print(f"Error: ffmpeg command not found. Please ensure ffmpeg is installed and in your PATH.", file=sys.stderr)
-                sys.exit(1) # Exit immediately as ffmpeg is a critical dependency
-            print("----------------------------------------------------")
+        # Execute the ffmpeg command
+        try:
+            # `subprocess.run` with `check=True` raises `CalledProcessError` for non-zero exit codes.
+            # `capture_output=True` redirects stdout/stderr, mimicking `&> /dev/null`.
+            subprocess.run(cmd, check=True, capture_output=True, text=True)
+            print(f"  Successfully extracted and converted to: {output_file}")
+            processed_count += 1
+            log_metadata(output_mp3_cleaned, annotation, duration, txt_len)
+        except subprocess.CalledProcessError as e:
+            print(f"  Error: Failed to process segment from '{input_file}' to '{output_file}'. "
+                    f"FFmpeg stderr: {e.stderr.strip()}", file=sys.stderr)
+            failed_count += 1
+        except FileNotFoundError:
+            # This specific error means the 'ffmpeg' executable itself wasn't found
+            print(f"Error: ffmpeg command not found. Please ensure ffmpeg is installed and in your PATH.", file=sys.stderr)
+            sys.exit(1) # Exit immediately as ffmpeg is a critical dependency
+        print("----------------------------------------------------")
 
     print("\nScript finished.")
     print(f"Total segments processed successfully: {processed_count}")
