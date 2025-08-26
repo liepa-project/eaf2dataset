@@ -228,7 +228,7 @@ def main():
 
         if os.path.isfile(output_file):
             log_to_file_and_stderr(f"Warning: Output file '{output_file}' exists already. Skipping this segment.", "file_exists.log")
-            failed_count += 1
+            # failed_count += 1
             continue
 
         # Convert start and end times, replicating the shell script's awk logic
