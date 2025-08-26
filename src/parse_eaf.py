@@ -114,7 +114,7 @@ def parse_eaf(eaf_path):
 
 
 
-def group_transcription_segments(annotation_doc: AnnotationDoc, max_chunk_duration: int = 26000, max_gap_between_segments: int = 1000) -> List[Annotation]:
+def group_transcription_segments(annotation_doc: AnnotationDoc, max_chunk_duration: int = 26000, max_gap_between_segments: int = 1000, max_text_len=500) -> List[Annotation]:
     """
     Groups audio transcription annotation segments into larger chunks based on time constraints.
 
@@ -205,12 +205,15 @@ def group_transcription_segments(annotation_doc: AnnotationDoc, max_chunk_durati
             # Calculate the potential total duration of the chunk if the current segment is added.
             potential_total_duration = segment.time_slot_end - current_chunk.time_slot_start
 
+            potential_text_len = len(segment.annotation_value) + len(current_chunk.annotation_value)
+
             # Determine if a new chunk should be started.
             # This happens if:
             # 1. The gap between segments is too large, OR
             # 2. Adding the current segment would make the chunk's total duration
             #    exceed the maximum allowed duration.
-            if gap > max_gap_between_segments or potential_total_duration > max_chunk_duration:
+            # 3. text length is too long
+            if gap > max_gap_between_segments or potential_total_duration > max_chunk_duration or potential_text_len > max_text_len:
                 # Finalize the current chunk and add it to the list of grouped chunks.
                 logger.debug("_grouped_chunks_ gap %s, potential_total_duration %s", gap, potential_total_duration)
                 grouped_chunks.append(current_chunk)
