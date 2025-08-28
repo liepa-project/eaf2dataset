@@ -1,6 +1,8 @@
 
 samples
 */bak/*
+metadata.csv
+*.bak
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
