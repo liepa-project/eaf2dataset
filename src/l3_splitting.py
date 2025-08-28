@@ -258,6 +258,8 @@ def main():
                 "-i", input_file,
                 "-ss", start_sec,
                 "-to", end_sec,
+                "-acodec", "pcm_s16le",
+                "-ar", "16000",
                 "-c:a", "libmp3lame",
                 "-q:a", "2",
                 "-y", output_file
@@ -270,7 +272,7 @@ def main():
                 subprocess.run(cmd, check=True, capture_output=True, text=True)
                 print(f"  Successfully extracted and converted to: {output_file}")
                 processed_count += 1
-                log_metadata(output_mp3_cleaned, annotation, duration, txt_len)
+                log_metadata(output_mp3_cleaned, annotation, duration, txt_len, filename=os.path.join(output_root_dir, "metadata.csv"))
             except subprocess.CalledProcessError as e:
                 print(f"  Error: Failed to process segment from '{input_file}' to '{output_file}'. "
                       f"FFmpeg stderr: {e.stderr.strip()}", file=sys.stderr)

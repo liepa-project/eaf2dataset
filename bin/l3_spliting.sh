@@ -172,7 +172,7 @@ while IFS=$'\t' read -r input_wav output_mp3 start_segment end_segment duration 
     # -c:a libmp3lame: use libmp3lame codec for MP3 encoding
     # -q:a 2: variable bitrate quality (0=best, 9=worst for libmp3lame)
     # -y: overwrite output files without asking
-    ffmpeg -i "$input_file" -ss "$start_sec" -to "$end_sec" -c:a libmp3lame -q:a 2 -y "$output_file"  &> /dev/null
+    ffmpeg -i "$input_file" -ss "$start_sec" -to "$end_sec" -acodec pcm_s16le -ar 16000 -c:a libmp3lame -q:a 2 -y "$output_file"  &> /dev/null
 
     if [ $? -eq 0 ]; then
         echo "  Successfully extracted and converted to: $output_file"
