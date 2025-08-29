@@ -60,6 +60,11 @@ def log_metadata(output_mp3, annotation:str, duration:str, txt_len:str, filename
     
     clean_annotation=annotation.replace(',', '').replace('"', '').replace('|', '')
 
+    # if file do not exists create header
+    if not os.path.exists(filename):
+        with open(filename, 'w', encoding='utf-8') as f:
+            f.write("file_name,transcript,duration,txt_len\n")
+
     with open(filename, 'a', encoding='utf-8') as f:
         f.write(f"./mp3/{output_mp3},{clean_annotation},{duration},{txt_len}\n")
 
@@ -113,7 +118,7 @@ def split_audio_from_tsv(tsv_file_path: str, file_index_path, output_root_dir: s
             logging.info(f"✅ All output files for '{input_wav_orig}' already exist. Skipping this group.")
             continue
         else:
-            logging.debug(f"NOT all output files for '{input_wav_orig}' already exist. Skipping this group.")
+            logging.debug(f"NOT all output files for '{input_wav_orig}' already exist. Processing this group.")
         try:
             input_file = find_real_path(str(input_wav_orig), file_index_df)
             logging.info(f"\n>Input_file : {input_wav_orig} -> {input_file}")
