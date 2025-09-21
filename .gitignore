@@ -3,6 +3,8 @@ samples
 */bak/*
 metadata.csv
 *.bak
+tests/*.eaf
+tests/*.wav
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

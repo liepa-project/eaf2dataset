@@ -48,7 +48,7 @@ def find_output_path(output_root_dir, output_mp3_orig):
     output_file=os.path.abspath(output_file)
     return output_file, output_mp3_cleaned
 
-def log_metadata(output_mp3, annotation:str, duration:str, txt_len:str, filename="metadata.csv"):
+def log_metadata(output_mp3, annotation:str, duration:str, txt_len:str, speakers:str, filename="metadata.csv"):
     """
     Logs a message with an ISO-formatted timestamp to a specified file
     and also prints it to stderr.
@@ -63,10 +63,10 @@ def log_metadata(output_mp3, annotation:str, duration:str, txt_len:str, filename
     # if file do not exists create header
     if not os.path.exists(filename):
         with open(filename, 'w', encoding='utf-8') as f:
-            f.write("file_name,transcript,duration,txt_len\n")
+            f.write("file_name,transcript,duration,txt_len,speakers\n")
 
     with open(filename, 'a', encoding='utf-8') as f:
-        f.write(f"./mp3/{output_mp3},{clean_annotation},{duration},{txt_len}\n")
+        f.write(f"./mp3/{output_mp3},{clean_annotation},{duration},{txt_len},{speakers}\n")
 
 
 
@@ -87,7 +87,7 @@ def split_audio_from_tsv(tsv_file_path: str, file_index_path, output_root_dir: s
         
         # Validate required columns
         # required_cols = ['input_wav_path', 'output_mp3_path', 'start_segment_ms', 'end_segment_ms']
-        required_cols = ["input_wav_path", "output_mp3_path", "start_segment", "end_segment", "duration_segment", "text_len", "annotation"]
+        required_cols = ["input_wav_path", "output_mp3_path", "start_segment", "end_segment", "duration_segment", "text_len", "speakers", "annotation"]
         if not all(col in df.columns for col in required_cols):
             logging.error(f"Error: The TSV file must contain the following columns: {required_cols}, \n but was {df.columns}")
             sys.exit(1)
@@ -144,6 +144,7 @@ def split_audio_from_tsv(tsv_file_path: str, file_index_path, output_root_dir: s
                 text_len=row['text_len']
                 start_ms = row['start_segment']
                 end_ms = row['end_segment']
+                speakers=row['speakers']
 
                 # Slice the audio segment
                 chunk = audio[start_ms:end_ms]
@@ -156,7 +157,7 @@ def split_audio_from_tsv(tsv_file_path: str, file_index_path, output_root_dir: s
                 # Export the chunk as an MP3 file
                 chunk.export(output_file, format="mp3")
                             #  prameters=["-acodec", "pcm_s16le", "-ar", "16000", "-c:a", "libmp3lame", "-q:a", "2"])
-                metadata_tuple=(output_mp3_cleaned, annotation, duration_segment, text_len, metadata_filename)
+                metadata_tuple=(output_mp3_cleaned, annotation, duration_segment, text_len, speakers, metadata_filename)
                 # buffer all files and only all exports is done, only then push to file 
                 metadata_buffer.append(metadata_tuple)
                 logging.debug(f"\tExported:\t{output_file} [{start_ms},{end_ms}]")
@@ -164,7 +165,7 @@ def split_audio_from_tsv(tsv_file_path: str, file_index_path, output_root_dir: s
             # buffer all files and only all exports is done, only then push to file
             for metadata_tuple in metadata_buffer:
                 output_mp3,annotation,duration,txt_len,filename=metadata_tuple
-                log_metadata(output_mp3,annotation,duration,txt_len,filename)
+                log_metadata(output_mp3,annotation,duration,txt_len,speakers,filename)
 
         except FileNotFoundError as fe:
             logging.error(f"Error: Input file '{input_file}' not found. Skipping this group.")

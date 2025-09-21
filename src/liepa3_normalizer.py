@@ -6,7 +6,7 @@ import unicodedata
 class Liepa3TextNormalizer:
     def __init__(self):
         self.clean = self.remove_symbols
-        self.regex_dual_definition = r"\(([\w\s]*)\/[\w\s]*\)" # (von triero/von trier)
+        self.regex_dual_definition = r"\(+([\w\s]*)[\/|\?\\]+[\w\s\.'\-\&\"'@]+\)" # (von triero/von trier) ir (dži en dži/G&amp;G) ir (Šolachovo|Šolochov) ir ((Dženifer Valente/Jennifer Valente)
         self.regex_spelled_diamond = r"<([\w\s]*)>" # <mantrierodžek>
         self.regex_spelled_parenthesis = r"\(([\w\s]*)\)" # (feisbukas)
 
@@ -18,9 +18,11 @@ class Liepa3TextNormalizer:
 
     def __call__(self, s: str):
 
-        s = s.replace("—", "-")
-        s = s.replace("“", "\"")
-        s = s.replace("„", "\"")
+        s = s.replace("—", " ")
+        s = s.replace("“", " ")
+        s = s.replace("„", " ")
+        
+        s = s.replace("’", " ")
         s = s.replace("\t", " ")
         s = re.sub(self.regex_dual_definition, r"\1", s) # (Monik/Monique)
         s = re.sub(self.regex_spelled_diamond, r"\1", s) # <eta>
