@@ -7,7 +7,8 @@ class Liepa3TextNormalizer:
     def __init__(self):
         self.clean = self.remove_symbols
         self.regex_dual_definition = r"\(([\w\s]*)\/[\w\s]*\)" # (von triero/von trier)
-        self.regex_spelled = r"<([\w\s]*)>" # <mantrierodžek>
+        self.regex_spelled_diamond = r"<([\w\s]*)>" # <mantrierodžek>
+        self.regex_spelled_parenthesis = r"\(([\w\s]*)\)" # (feisbukas)
 
     def remove_symbols(self, s: str):
         """
@@ -22,7 +23,8 @@ class Liepa3TextNormalizer:
         s = s.replace("„", "\"")
         s = s.replace("\t", " ")
         s = re.sub(self.regex_dual_definition, r"\1", s) # (Monik/Monique)
-        s = re.sub(self.regex_spelled, r"\1", s) # <eta>
+        s = re.sub(self.regex_spelled_diamond, r"\1", s) # <eta>
+        s = re.sub(self.regex_spelled_parenthesis, r"\1", s) # (feisbukas)
         # s = re.sub(r"[<\[][^>\]]*[>\]]", "", s)  # remove words between brackets: 
         # s = re.sub(r"\(([^)]+?)\)", "", s)  # remove words between parenthesis: 
         # s = self.clean(s).lower()

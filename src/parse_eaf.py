@@ -6,6 +6,7 @@ from pympi import Eaf
 # from dataclasses import dataclass
 import dataclasses
 import json
+import re
 
 import logging
 logger = logging.getLogger("DEBUG")
@@ -17,6 +18,9 @@ import liepa3_normalizer
 
 normalizer = liepa3_normalizer.Liepa3TextNormalizer()
 
+#"noise" - Liepa2
+IgnoreTiers = ('overlap', 'noise', 'default', 'zodziai') 
+ValidTierName  = re.compile(r"^S\d{4}|\d{1,2}frazes|Guest[-_]\d{1,2}$")
 
 
 @dataclasses.dataclass
@@ -90,13 +94,19 @@ def map_tier_detail(key:str, tier_details, time_slots:List[TimeSlot]) -> Optiona
     ### Liepa3
     if "ANNOTATOR" in tier_details[2]:
         # logging.error("tier_id: %s", tier_id)
+        if tier_id in IgnoreTiers:
+            logging.error("tier_id is ignored: %s", tier_id)
+            return None
+        if(not ValidTierName.match(tier_id)):
+            logging.error("tier_id is not valid: %s", tier_id)
+            return None
         return Tier(id=key,
-                        annotator=tier_details[2]["ANNOTATOR"],
-                        tier_id=tier_id,
-                        participant=tier_details[2].get("PARTICIPANT","NONE"),
-                        annotations=annotations)
-    ### Liepa2(tier_id != "noise") and some Liepa3(tier_id != "zodziai")
-    elif tier_id != "noise" and tier_id != "zodziai":
+                    annotator=tier_details[2]["ANNOTATOR"],
+                    tier_id=tier_id,
+                    participant=tier_details[2].get("PARTICIPANT","NONE"),
+                    annotations=annotations)
+    ### Liepa2(tier_id != "noise") 
+    elif not tier_id in IgnoreTiers:
         return Tier(id=key,
                         annotator="-",
                         tier_id=tier_id,
@@ -195,8 +205,7 @@ def group_transcription_segments(annotation_doc: AnnotationDoc, max_chunk_durati
             logging.error(f"[group_transcription_segments]Error : segment>30s\t{segment}")
             continue
         if(len(segment.annotation_value)==0):
-            # raise( Exception(f"Error : zero len annotation {aStr}"))
-            logging.error(f"[group_transcription_segments]Error : zero len annotation\t{segment}")
+            # logging.error(f"[group_transcription_segments]Error : zero len annotation\t{segment}")
             continue
         if(len(segment.annotation_value)>700):
         #    aStr = f"###{aStr}"
