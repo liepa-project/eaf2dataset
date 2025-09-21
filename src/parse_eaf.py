@@ -1,6 +1,6 @@
 import argparse
 import os
-from typing import List, Optional
+from typing import List, Set, Optional
 import typing
 from pympi import Eaf
 # from dataclasses import dataclass
@@ -13,6 +13,9 @@ logging.basicConfig(
     level=os.environ.get('PARSE_EAF_LOGLEVEL', 'INFO').upper()
 )
 
+import liepa3_normalizer
+
+normalizer = liepa3_normalizer.Liepa3TextNormalizer()
 
 
 
@@ -25,6 +28,7 @@ class TimeSlot:
 @dataclasses.dataclass
 class Annotation:
     id:str
+    tier_id:str
     time_slot_start_id: str
     time_slot_start: int
     time_slot_end_id: str
@@ -34,6 +38,7 @@ class Annotation:
 @dataclasses.dataclass
 class Tier:
     id: str
+    tier_id: str
     annotator: str
     participant: str
     # time_value: int
@@ -57,13 +62,14 @@ class LatEntry:
 
 
 
-def map_annotations(key:str, detail, time_slots:List[TimeSlot]) -> Annotation:
+def map_annotations(key:str, detail, time_slots:List[TimeSlot], tier_id:str) -> Annotation:
     time_slot_start_id=detail[0]
     time_slot_start = [ts.time_value for ts in time_slots if ts.id == time_slot_start_id][0]
     time_slot_end_id=detail[1]
     time_slot_end = [ts.time_value for ts in time_slots if ts.id == time_slot_end_id][0]
     # logger.debug('[map_annotations] detail %s', detail)
     return Annotation(id=key,
+                            tier_id=tier_id,
                             time_slot_start_id=time_slot_start_id,
                             time_slot_start=time_slot_start,
                             time_slot_end_id=time_slot_end_id,
@@ -74,7 +80,8 @@ def map_annotations(key:str, detail, time_slots:List[TimeSlot]) -> Annotation:
 
 def map_tier_detail(key:str, tier_details, time_slots:List[TimeSlot]) -> Optional[Tier]:
     annotations_dict=tier_details[0]
-    annotations=[map_annotations(k,v, time_slots) for k,v in annotations_dict.items()]
+    tier_id=tier_details[2].get("TIER_ID","NONE")
+    annotations=[map_annotations(k,v, time_slots, tier_id) for k,v in annotations_dict.items()]
     # print(annotations)
     # logger.debug('[map_tier_detail] annotation empty %s', tier_details[1])
     logger.debug('[map_tier_detail] ANNOTATOR %s', tier_details[2])
@@ -82,14 +89,17 @@ def map_tier_detail(key:str, tier_details, time_slots:List[TimeSlot]) -> Optiona
     
     ### Liepa3
     if "ANNOTATOR" in tier_details[2]:
+        # logging.error("tier_id: %s", tier_id)
         return Tier(id=key,
                         annotator=tier_details[2]["ANNOTATOR"],
+                        tier_id=tier_id,
                         participant=tier_details[2].get("PARTICIPANT","NONE"),
                         annotations=annotations)
-    ### Liepa2
-    elif "TIER_ID" in tier_details[2] and tier_details[2].get("TIER_ID","NONE") != "noise" :
+    ### Liepa2(tier_id != "noise") and some Liepa3(tier_id != "zodziai")
+    elif tier_id != "noise" and tier_id != "zodziai":
         return Tier(id=key,
                         annotator="-",
+                        tier_id=tier_id,
                         participant=tier_details[2].get("PARTICIPANT","NONE"),
                         annotations=annotations)
     else:
@@ -114,7 +124,7 @@ def parse_eaf(eaf_path):
 
 
 
-def group_transcription_segments(annotation_doc: AnnotationDoc, max_chunk_duration: int = 26000, max_gap_between_segments: int = 1000, max_text_len=500) -> List[Annotation]:
+def group_transcription_segments(annotation_doc: AnnotationDoc, max_chunk_duration: int = 26000, max_gap_between_segments: int = 500, max_text_len=500) -> List[Annotation]:
     """
     Groups audio transcription annotation segments into larger chunks based on time constraints.
 
@@ -158,6 +168,7 @@ def group_transcription_segments(annotation_doc: AnnotationDoc, max_chunk_durati
     """
     grouped_chunks = []
     current_chunk:Optional[Annotation] = None
+    current_chunk_tierids:set[str]|None=None
 
     # Safely retrieve annotations from the input data structure.
     # We assume annotations are in the first tier.
@@ -193,7 +204,9 @@ def group_transcription_segments(annotation_doc: AnnotationDoc, max_chunk_durati
             continue
         if current_chunk is None:
             # If no chunk is currently being built, start a new one with the current segment.
+            current_chunk_tierids={segment.tier_id}
             current_chunk = Annotation(id=segment.id,
+                            tier_id=segment.tier_id,
                             time_slot_start_id=segment.time_slot_start_id,
                             time_slot_start=segment.time_slot_start,
                             time_slot_end_id=segment.time_slot_end_id,
@@ -207,6 +220,7 @@ def group_transcription_segments(annotation_doc: AnnotationDoc, max_chunk_durati
 
             potential_text_len = len(segment.annotation_value) + len(current_chunk.annotation_value)
 
+
             # Determine if a new chunk should be started.
             # This happens if:
             # 1. The gap between segments is too large, OR
@@ -216,23 +230,30 @@ def group_transcription_segments(annotation_doc: AnnotationDoc, max_chunk_durati
             if gap > max_gap_between_segments or potential_total_duration > max_chunk_duration or potential_text_len > max_text_len:
                 # Finalize the current chunk and add it to the list of grouped chunks.
                 logger.debug("_grouped_chunks_ gap %s, potential_total_duration %s", gap, potential_total_duration)
+                if current_chunk_tierids!= None: current_chunk.tier_id="|".join(list(current_chunk_tierids))
                 grouped_chunks.append(current_chunk)
                 logger.debug("\n_grouped_chunks_ after %s", len(grouped_chunks))
                 # Start a new chunk with the current segment.
+                current_chunk_tierids=set([segment.tier_id])
                 current_chunk = Annotation(id=segment.id,
+                            tier_id=segment.tier_id,
                             time_slot_start_id=segment.time_slot_start_id,
                             time_slot_start=segment.time_slot_start,
                             time_slot_end_id=segment.time_slot_end_id,
                             time_slot_end=segment.time_slot_end,
-                            annotation_value=segment.annotation_value)
+                            annotation_value=segment.annotation_value
+                            
+                            )
             else:
                 # If conditions allow, append the current segment's text to the current chunk's text
                 # and update the chunk's end time.
+                if current_chunk_tierids != None: current_chunk_tierids.add(segment.tier_id)
                 current_chunk.annotation_value += " | " + segment.annotation_value
                 current_chunk.time_slot_end = segment.time_slot_end
 
     # After iterating through all segments, ensure the last built chunk is added to the list.
     if current_chunk is not None:
+        if current_chunk_tierids!= None: current_chunk.tier_id="|".join(list(current_chunk_tierids))
         grouped_chunks.append(current_chunk)
 
     return grouped_chunks
@@ -241,6 +262,10 @@ def group_transcription_segments(annotation_doc: AnnotationDoc, max_chunk_durati
 def format_annotations(eaf_doc:AnnotationDoc, group_annotations:List[Annotation]):
     media_file_name = os.path.basename(eaf_doc.eaf_path)
     media_file_name_wo_ext = os.path.splitext(media_file_name)[0]
+    output_mp3_cleaned = media_file_name_wo_ext.replace(' ', '_')
+    output_mp3_cleaned = output_mp3_cleaned.replace('(', '_')
+    output_mp3_cleaned = output_mp3_cleaned.replace(')', '_')
+
     media_dir_name = os.path.basename(os.path.dirname(eaf_doc.eaf_path))
     os.path.dirname
     result:List[str] = []
@@ -248,13 +273,11 @@ def format_annotations(eaf_doc:AnnotationDoc, group_annotations:List[Annotation]
     for annotation in group_annotations:
         segment_length=annotation.time_slot_end - annotation.time_slot_start
         annotation_value = annotation.annotation_value.replace("\n", " ")
-        annotation_value = annotation_value.replace("—", "-")
-        annotation_value = annotation_value.replace("“", "\"")
-        annotation_value = annotation_value.replace("„", "\"")
-        annotation_value = annotation_value.replace("\t", " ")
+        annotation_value=normalizer(annotation_value)
         annotation_value_len = len(annotation_value) 
+        tiers=annotation.tier_id
         #bash script loosing first symbols. I ll us currend dir hack
-        aStr = f"./{media_dir_name}/{media_file_name_wo_ext}.wav\t{media_dir_name}/{media_file_name_wo_ext}_chunk_{counter:03}.mp3\t{annotation.time_slot_start}\t{annotation.time_slot_end}\t{segment_length}\t{annotation_value_len}\t{annotation_value}"
+        aStr = f"./{media_dir_name}/{media_file_name_wo_ext}.wav\t{media_dir_name}/{output_mp3_cleaned}_chunk_{counter:03}.mp3\t{annotation.time_slot_start}\t{annotation.time_slot_end}\t{segment_length}\t{annotation_value_len}\t{tiers}\t{annotation_value}"
         ### workarounds
         if(segment_length > 30000):
             # segment too long to use

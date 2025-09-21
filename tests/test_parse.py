@@ -38,12 +38,14 @@ class Test_file_util(unittest.TestCase):
     
     def create_tier(self, anotations:List[parse_eaf.Annotation]) -> parse_eaf.Tier:
         return parse_eaf.Tier(id="key",
+                        tier_id="T1",
                         annotator="AA",
                         participant="PP",
                         annotations=anotations)
 
     def create_annotation(self, time_slot_start:int, time_slot_end:int, annotation_value:str) -> parse_eaf.Annotation:
         return parse_eaf.Annotation(id="key"+ str(time_slot_start),
+                            tier_id="T1",
                             time_slot_start_id="t",
                             time_slot_start=time_slot_start,
                             time_slot_end_id="t",
