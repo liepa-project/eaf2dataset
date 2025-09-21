@@ -164,7 +164,7 @@ def split_audio_from_tsv(tsv_file_path: str, file_index_path, output_root_dir: s
             
             # buffer all files and only all exports is done, only then push to file
             for metadata_tuple in metadata_buffer:
-                output_mp3,annotation,duration,txt_len,filename=metadata_tuple
+                output_mp3,annotation,duration,txt_len,speakers,filename=metadata_tuple
                 log_metadata(output_mp3,annotation,duration,txt_len,speakers,filename)
 
         except FileNotFoundError as fe:
