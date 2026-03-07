@@ -134,7 +134,8 @@ def parse_eaf(eaf_path):
 
 
 
-def group_transcription_segments(annotation_doc: AnnotationDoc, max_chunk_duration: int = 26000, max_gap_between_segments: int = 500, max_text_len=500) -> List[Annotation]:
+def group_transcription_segments(annotation_doc: AnnotationDoc, max_chunk_duration: int = 28000, 
+            max_gap_between_segments: int = 66, max_text_len:int=500, expand_annotation: int = 33) -> List[Annotation]:
     """
     Groups audio transcription annotation segments into larger chunks based on time constraints.
 
@@ -180,6 +181,7 @@ def group_transcription_segments(annotation_doc: AnnotationDoc, max_chunk_durati
     current_chunk:Optional[Annotation] = None
     current_chunk_tierids:set[str]|None=None
 
+    
     # Safely retrieve annotations from the input data structure.
     # We assume annotations are in the first tier.
     all_annotations:List[Annotation] = []
@@ -194,6 +196,9 @@ def group_transcription_segments(annotation_doc: AnnotationDoc, max_chunk_durati
         print("Warning: No annotations found in the provided data structure.")
         return []
 
+    #max time_slot_end in all_annotations
+    max_time_slot_end = max(annotation.time_slot_end for annotation in all_annotations)
+
     for segment in all_annotations:
         # segment_id = segment.id
         # segment_start = segment.time_slot_start
@@ -202,14 +207,14 @@ def group_transcription_segments(annotation_doc: AnnotationDoc, max_chunk_durati
 
         if(segment.time_slot_end-segment.time_slot_start > 30000):
             # segment too long to use
-            logging.error(f"[group_transcription_segments]Error : segment>30s\t{segment}")
+            logging.error(f"[group_transcription_segments] [{annotation_doc.eaf_path}] - {segment.id} : Error : segment>30s\t{segment}")
             continue
         if(len(segment.annotation_value)==0):
             # logging.error(f"[group_transcription_segments]Error : zero len annotation\t{segment}")
             continue
         if(len(segment.annotation_value)>700):
         #    aStr = f"###{aStr}"
-            logging.error(f"[group_transcription_segments]Error : text_len>700\t{segment}")
+            logging.error(f"[group_transcription_segments] [{annotation_doc.eaf_path}] - {segment.id} : Error : text_len>700\t{segment}")
             continue
         if current_chunk is None:
             # If no chunk is currently being built, start a new one with the current segment.
@@ -217,9 +222,9 @@ def group_transcription_segments(annotation_doc: AnnotationDoc, max_chunk_durati
             current_chunk = Annotation(id=segment.id,
                             tier_id=segment.tier_id,
                             time_slot_start_id=segment.time_slot_start_id,
-                            time_slot_start=segment.time_slot_start,
+                            time_slot_start=max(0, segment.time_slot_start-expand_annotation),
                             time_slot_end_id=segment.time_slot_end_id,
-                            time_slot_end=segment.time_slot_end,
+                            time_slot_end=min(max_time_slot_end, segment.time_slot_end+expand_annotation),
                             annotation_value=segment.annotation_value)
         else:
             # Calculate the time gap between the current segment and the end of the current chunk.
@@ -290,15 +295,15 @@ def format_annotations(eaf_doc:AnnotationDoc, group_annotations:List[Annotation]
         ### workarounds
         if(segment_length > 30000):
             # segment too long to use
-            logging.error(f"[format_annotations]Error : segment>30s\t{aStr}")
+            logging.error(f"[format_annotations] [{eaf_doc.eaf_path}] - {annotation.id} : Error : segment>30s\t{aStr}")
             continue
         if(annotation_value_len==0):
             # raise( Exception(f"Error : zero len annotation {aStr}"))
-            logging.error(f"Error : zero len annotation\t{aStr}")
+            logging.error(f"[format_annotations] [{eaf_doc.eaf_path}] - {annotation.id} : Error : zero len annotation\t{aStr}")
             continue
         if(annotation_value_len>700):
         #    aStr = f"###{aStr}"
-            logging.error(f"[format_annotations]Error : text_len>700\t{aStr}")
+            logging.error(f"[format_annotations] [{eaf_doc.eaf_path}] - {annotation.id} : Error : text_len>700\t{aStr}")
             continue
 
 
