@@ -3,7 +3,6 @@ import argparse
 import parse_eaf
 
 import logging
-from tqdm import tqdm
 logger = logging.getLogger("INFO")
 logging.basicConfig(
     level=os.environ.get('PARSE_EAF_LOGLEVEL', 'INFO').upper()
@@ -112,7 +111,10 @@ def main():
 
     all_eaf_files = find_eaf_files(root_path)
     filtered_eaf_files = filter_eaf_files_by_subdir(all_eaf_files, exclusion_file, inclusion_file)
-    for eaf_file in tqdm(filtered_eaf_files):
+    logger.error(f"Found {len(filtered_eaf_files)} eaf files")
+    for index, eaf_file in enumerate(filtered_eaf_files):
+        if index % 100 == 0:
+            logger.error(f"Processing file {index+1} of {len(filtered_eaf_files)}: {eaf_file}")
         parse_eaf.process_eaf_file(eaf_file)
     # print(filtered_eaf_files)
 
