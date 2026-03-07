@@ -112,9 +112,10 @@ def main():
     all_eaf_files = find_eaf_files(root_path)
     filtered_eaf_files = filter_eaf_files_by_subdir(all_eaf_files, exclusion_file, inclusion_file)
     logger.error(f"Found {len(filtered_eaf_files)} eaf files")
+    deca_percentage_step = int(len(filtered_eaf_files) / 10)
     for index, eaf_file in enumerate(filtered_eaf_files):
-        if index % 100 == 0:
-            logger.error(f"Processing file {index+1} of {len(filtered_eaf_files)}: {eaf_file}")
+        if index % deca_percentage_step == 0:
+            logger.error(f"Processing file {index+1} of {len(filtered_eaf_files)}: {eaf_file} - {index/len(filtered_eaf_files)*100:.2f}%")
         parse_eaf.process_eaf_file(eaf_file)
     # print(filtered_eaf_files)
 
