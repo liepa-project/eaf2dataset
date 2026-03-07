@@ -31,7 +31,7 @@ def find_real_path(a_file_path: str, file_index_df) -> Optional[str]:
             org_file_path=result.iloc[0]
             file_path = os.path.realpath(org_file_path)
             if not os.path.exists(file_path):
-                logging.error("[find_real_path]Not exists: org_file_path:",org_file_path, ";file_path:", file_path, "." )
+                logging.error(f"[find_real_path] Not exists: org_file_path: {org_file_path}; file_path: {file_path}.")
             return file_path
         else:
             return None
