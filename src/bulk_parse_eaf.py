@@ -5,6 +5,7 @@ import parse_eaf
 import logging
 logger = logging.getLogger("INFO")
 logging.basicConfig(
+    format='%(asctime)s %(levelname)-8s %(message)s',
     level=os.environ.get('PARSE_EAF_LOGLEVEL', 'INFO').upper()
 )
 
@@ -117,6 +118,7 @@ def main():
         if index % deca_percentage_step == 0:
             logger.error(f"Processing file {index+1} of {len(filtered_eaf_files)}: {eaf_file} - {index/len(filtered_eaf_files)*100:.2f}%")
         parse_eaf.process_eaf_file(eaf_file)
+    logger.error(f"Processing complete")
     # print(filtered_eaf_files)
 
 
