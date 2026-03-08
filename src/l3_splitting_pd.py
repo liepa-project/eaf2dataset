@@ -6,6 +6,8 @@ import argparse
 import sys
 from tqdm import tqdm
 
+import pathlib
+
 import logging
 logger = logging.getLogger("INFO")
 logging.basicConfig(
@@ -13,7 +15,7 @@ logging.basicConfig(
 )
 
 
-def find_real_path(a_file_path: str, file_index_df) -> Optional[str]:
+def find_real_path(a_file_path: str, file_index_df) -> Optional[pathlib.Path]:
     """
     Reads a CSV file with 'file_path' and 'real_path' columns,
     and returns the 'real_path' corresponding to a given 'file_path'.
@@ -33,7 +35,7 @@ def find_real_path(a_file_path: str, file_index_df) -> Optional[str]:
             file_path = os.path.realpath(org_file_path)
             if not os.path.exists(file_path):
                 logging.error(f"[find_real_path] Not exists: org_file_path: {org_file_path}; file_path: {file_path}.")
-            return file_path
+            return pathlib.Path(file_path)
         else:
             return None
     except Exception as e:
@@ -123,6 +125,9 @@ def split_audio_from_tsv(tsv_file_path: str, file_index_path, output_root_dir: s
         try:
             input_file = find_real_path(str(input_wav_orig), file_index_df)
             logging.info(f"\n>Input_file : {input_wav_orig} -> {input_file}")
+            if input_file is None:
+                logging.error(f"Error: Input file '{input_wav_orig}' not found. Skipping this group.")
+                continue
             audio = AudioSegment.from_file(input_file)
             audio = audio.set_frame_rate(16000)
             logging.info(f"  found_path :   {input_file}")
@@ -174,8 +179,8 @@ def split_audio_from_tsv(tsv_file_path: str, file_index_path, output_root_dir: s
             raise fe
         except Exception as e:
             logging.error(f"An error occurred while processing '{input_file}': {e}. Skipping this group.")
-            continue
-            # raise e
+            # continue
+            raise e
 
     logging.info("\nAll audio processing tasks complete.")
 
