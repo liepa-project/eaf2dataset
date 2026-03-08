@@ -174,8 +174,8 @@ def split_audio_from_tsv(tsv_file_path: str, file_index_path, output_root_dir: s
             raise fe
         except Exception as e:
             logging.error(f"An error occurred while processing '{input_file}': {e}. Skipping this group.")
-            # continue
-            raise e
+            continue
+            # raise e
 
     logging.info("\nAll audio processing tasks complete.")
 
