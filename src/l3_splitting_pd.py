@@ -4,6 +4,7 @@ from pydub import AudioSegment
 import os
 import argparse
 import sys
+from tqdm import tqdm
 
 import logging
 logger = logging.getLogger("INFO")
@@ -101,7 +102,7 @@ def split_audio_from_tsv(tsv_file_path: str, file_index_path, output_root_dir: s
     
     logging.info(f"Processing {len(grouped_df)} unique audio files...")
     
-    for input_wav_orig, group in grouped_df:
+    for input_wav_orig, group in tqdm(grouped_df, desc="Processing audio files"):
         
         # Check if all output files for this group already exist
         all_output_exist = True
